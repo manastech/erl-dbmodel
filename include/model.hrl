@@ -1,6 +1,6 @@
 -include("db.hrl").
 -export([new/0, new/1, create/0, create/1, find/1, find_all/0, find_all/1, find_all/2,
-  update/1, update/2, delete/1, save/1, find_or_new/1, find_or_create/1, find_in_batches/2]).
+  update/1, update/2, delete/1, save/1, find_or_new/1, find_or_create/1, find_in_batches/2, find_in_batches/3]).
 
 -ifndef(MAP).
 -define(MAP(Record), Record).
@@ -82,15 +82,18 @@ find_all(Criteria, Options) ->
   end, Rows).
 
 find_in_batches(Criteria, Fun) ->
-  find_in_batches(Criteria, 0, Fun).
+  find_in_batches(Criteria, 0, fun(Batch, S) -> Fun(Batch), S end, undefined).
 
-find_in_batches(Criteria, From, Fun) ->
+find_in_batches(Criteria, Fun, State) ->
+  find_in_batches(Criteria, 0, Fun, State).
+
+find_in_batches(Criteria, From, Fun, State) ->
   case find_all([{id, '>', From} | Criteria], [{order_by, id}, {limit, 1000}]) of
     [] -> ok;
     Batch ->
-      Fun(Batch),
+      NewState = Fun(Batch, State),
       Last = lists:last(Batch),
-      find_in_batches(Criteria, Last#?MODULE.id, Fun)
+      find_in_batches(Criteria, Last#?MODULE.id, Fun, NewState)
   end.
 
 update(Record = #?MODULE{}) ->
