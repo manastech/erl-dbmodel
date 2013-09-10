@@ -6,10 +6,6 @@
 -define(MAP(Record), Record).
 -endif.
 
--ifndef(CACHE).
--define(CACHE, false).
--endif.
-
 new() -> #?MODULE{}.
 
 new(Fields) ->
@@ -50,17 +46,24 @@ find(Id) when is_number(Id) ->
   find({id, Id});
 
 find(Criteria) ->
-  case ?CACHE of
-    true ->
+  find_with_cache(Criteria).
+
+-ifdef(CACHE).
+
+find_with_cache(Criteria) ->
       cache:get({?MODULE, Criteria}, fun() ->
         case find_without_cache(Criteria) of
           undefined -> undefined;
           Record -> {{?MODULE, {id, Record#?MODULE.id}}, Record}
         end
-      end);
-    false ->
-      find_without_cache(Criteria)
-  end.
+  end).
+
+-else.
+
+find_with_cache(Criteria) ->
+  find_without_cache(Criteria).
+
+-endif.
 
 find_without_cache(Criteria) ->
   case db:select_one(iolist_to_binary(select_query(Criteria, []))) of
