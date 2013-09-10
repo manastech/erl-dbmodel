@@ -1,5 +1,5 @@
 -include("db.hrl").
--export([new/0, new/1, create/0, create/1, find/1, find_all/0, find_all/1, find_all/2,
+-export([new/0, new/1, create/0, create/1, find/1, find_all/0, find_all/1, find_all/2, count/1, exists/1,
   update/1, update/2, delete/1, save/1, find_or_new/1, find_or_create/1, find_in_batches/2, find_in_batches/3]).
 
 -ifndef(MAP).
@@ -42,6 +42,15 @@ create(Record = #?MODULE{}) ->
   Id = db:insert(insert_query(RecordToInsert)),
   RecordToInsert#?MODULE{id = Id}.
 
+count(Criteria) ->
+  [Count] = db:select_one(select_count_query(Criteria, [])),
+  Count.
+
+exists(Id) when is_number(Id) -> exists({id, Id});
+exists(#?MODULE{id = Id}) -> exists(Id);
+exists(undefined) -> false;
+exists(Criteria) -> count(Criteria) > 0.
+
 find(Id) when is_number(Id) ->
   find({id, Id});
 
@@ -51,11 +60,11 @@ find(Criteria) ->
 -ifdef(CACHE).
 
 find_with_cache(Criteria) ->
-      cache:get({?MODULE, Criteria}, fun() ->
-        case find_without_cache(Criteria) of
-          undefined -> undefined;
-          Record -> {{?MODULE, {id, Record#?MODULE.id}}, Record}
-        end
+  cache:get({?MODULE, Criteria}, fun() ->
+    case find_without_cache(Criteria) of
+      undefined -> undefined;
+      Record -> {{?MODULE, {id, Record#?MODULE.id}}, Record}
+    end
   end).
 
 -else.
@@ -136,6 +145,9 @@ insert_values(Query, Record, Index, Count) ->
 
 select_query(Criteria, Options) ->
   ["SELECT " | select_fields(Criteria, Options, record_info(fields, ?MODULE))].
+
+select_count_query(Criteria, Options) ->
+  ["SELECT COUNT(*) FROM ", ?TABLE_NAME | select_criteria(Criteria, Options)].
 
 select_fields(Criteria, Options, [Field]) ->
   ["`", atom_to_list(Field), "` FROM ", ?TABLE_NAME | select_criteria(Criteria, Options)];
