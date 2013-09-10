@@ -109,6 +109,8 @@ update(Fields, Record) ->
   UpdatedRecord = set_values(Fields, Record),
   update(UpdatedRecord).
 
+delete(#?MODULE{id = undefined}) ->
+  ok;
 delete(Record = #?MODULE{}) ->
   1 = db:update(delete_query(Record)),
   ok.
