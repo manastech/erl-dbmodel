@@ -1,6 +1,7 @@
 -include("db.hrl").
 -export([new/0, new/1, create/0, create/1, find/1, find_all/0, find_all/1, find_all/2, count/1, exists/1,
-  update/1, update/2, delete/1, save/1, find_or_new/1, find_or_create/1, find_in_batches/2, find_in_batches/3]).
+  update/1, update/2, delete/1, delete_all/0, delete_all/1, save/1,
+  find_or_new/1, find_or_create/1, find_in_batches/2, find_in_batches/3]).
 
 -ifndef(MAP).
 -define(MAP(Record), Record).
@@ -120,9 +121,14 @@ update(Fields, Record) ->
 
 delete(#?MODULE{id = undefined}) ->
   ok;
-delete(Record = #?MODULE{}) ->
-  1 = db:update(delete_query(Record)),
+delete(#?MODULE{id = Id}) ->
+  1 = delete_all({id, Id}),
   ok.
+
+delete_all() -> delete_all([]).
+
+delete_all(Criteria) ->
+  db:update(delete_query(Criteria)).
 
 insert_query(Record) ->
   insert_fields(<<"INSERT INTO ", ?TABLE_NAME, "(">>, Record, record_info(fields, ?MODULE)).
@@ -205,8 +211,8 @@ update_fields(Record, Index, [Field | Rest]) ->
   [atom_to_list(Field), " = ", mysql:encode(element(Index, Record)), ", " | update_fields(Record, Index + 1, Rest)].
 
 
-delete_query(Record) ->
-  ["DELETE FROM ", ?TABLE_NAME, " WHERE id = ", mysql:encode(Record#?MODULE.id)].
+delete_query(Criteria) ->
+  ["DELETE FROM ", ?TABLE_NAME | select_criteria(Criteria, [])].
 
 value_list([]) -> [];
 value_list([Value]) ->
