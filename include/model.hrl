@@ -1,7 +1,7 @@
 -include("db.hrl").
 -export([new/0, new/1, create/0, create/1, find/1, find_all/0, find_all/1, find_all/2, count/1, exists/1,
   update/1, update/2, delete/1, delete_all/0, delete_all/1, save/1,
-  find_or_new/1, find_or_create/1, find_in_batches/2, find_in_batches/3]).
+  find_or_new/1, find_or_create/1, find_in_batches/2, find_in_batches/3, last/0]).
 
 -ifndef(MAP).
 -define(MAP(Record), Record).
@@ -109,6 +109,12 @@ find_in_batches(Criteria, From, Fun, State) ->
       find_in_batches(Criteria, Last#?MODULE.id, Fun, NewState)
   end.
 
+last() ->
+  case find_all([], [{order_by, id, desc}, {limit, 1}]) of
+    [] -> undefined;
+    [Row] -> Row
+  end.
+
 update(Record = #?MODULE{}) ->
   Now = {datetime, calendar:universal_time()},
   RecordToUpdate = Record#?MODULE{updated_at = Now},
@@ -197,6 +203,8 @@ select_criteria([Filter | Rest]) ->
 select_options([]) -> [];
 select_options([{order_by, Field} | Rest]) ->
   [" ORDER BY ", atom_to_list(Field) | select_options(Rest)];
+select_options([{order_by, Field, desc} | Rest]) ->
+  [" ORDER BY ", atom_to_list(Field), " DESC" | select_options(Rest)];
 select_options([{limit, Limit} | Rest]) ->
   [" LIMIT ", integer_to_list(Limit) | select_options(Rest)].
 
