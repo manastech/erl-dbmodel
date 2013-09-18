@@ -1,6 +1,6 @@
 -include("db.hrl").
 -export([new/0, new/1, create/0, create/1, find/1, find_all/0, find_all/1, find_all/2, count/1, exists/1,
-  update/1, update/2, delete/1, delete_all/0, delete_all/1, save/1,
+  update/1, update/2, update_all/2, delete/1, delete_all/0, delete_all/1, save/1,
   find_or_new/1, find_or_create/1, find_in_batches/2, find_in_batches/3, last/0, last/1]).
 
 -ifndef(MAP).
@@ -127,6 +127,9 @@ update(Fields, Record) ->
   UpdatedRecord = set_values(Fields, Record),
   update(UpdatedRecord).
 
+update_all(FieldsValues, Criteria) ->
+  db:update(update_all_query(FieldsValues, Criteria)).
+
 delete(#?MODULE{id = undefined}) ->
   ok;
 delete(#?MODULE{id = Id}) ->
@@ -220,6 +223,13 @@ update_fields(Record, Index, [Field]) ->
 update_fields(Record, Index, [Field | Rest]) ->
   [atom_to_list(Field), " = ", mysql:encode(element(Index, Record)), ", " | update_fields(Record, Index + 1, Rest)].
 
+update_all_query(FieldsValues, Criteria) ->
+  ["UPDATE ", ?TABLE_NAME, " SET " | update_all_fields(FieldsValues, Criteria)].
+
+update_all_fields([{Field, Value}], Criteria) ->
+  [atom_to_list(Field), " = ", mysql:encode(Value) | select_criteria(Criteria, [])];
+update_all_fields([{Field, Value} | FieldsValues], Criteria) ->
+  [atom_to_list(Field), " = ", mysql:encode(Value), ", " | update_all_fields(FieldsValues, Criteria)].
 
 delete_query(Criteria) ->
   ["DELETE FROM ", ?TABLE_NAME | select_criteria(Criteria, [])].
