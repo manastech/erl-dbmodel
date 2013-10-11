@@ -1,11 +1,17 @@
 -include("db.hrl").
--export([new/0, new/1, create/0, create/1, find/1, find_all/0, find_all/1, find_all/2, count/1, exists/1,
+-export([id/1, new/0, new/1, create/0, create/1, find/1, find_all/0, find_all/1, find_all/2, count/1, exists/1,
   update/1, update/2, update_all/2, delete/1, delete_all/0, delete_all/1, save/1,
   find_or_new/1, find_or_create/1, find_in_batches/2, find_in_batches/3, last/0, last/1]).
+
+-ifdef(TEST).
+-export([make/0, make/1]).
+-endif.
 
 -ifndef(MAP).
 -define(MAP(Record), Record).
 -endif.
+
+id(#?MODULE{id = Id}) -> Id.
 
 new() -> #?MODULE{}.
 
@@ -22,6 +28,22 @@ save(Record = #?MODULE{id = undefined}) ->
   create(Record);
 save(Record) ->
   update(Record).
+
+-ifdef(TEST).
+make() -> make([]).
+make(Fields) ->
+  Blueprint = orddict:merge(fun(_, _, V) -> V end,
+    orddict:from_list(blueprint:make(?MODULE)),
+    orddict:from_list(Fields)),
+  Record = lists:keymap(fun make_blueprint_value/1, 2, Blueprint),
+  create(new(Record)).
+
+make_blueprint_value(Tuple) when is_tuple(Tuple) -> Tuple:id();
+make_blueprint_value(Fun) when is_function(Fun) -> make_blueprint_value(Fun());
+make_blueprint_value(Ref) when is_reference(Ref) -> erlang:ref_to_list(Ref);
+make_blueprint_value(Atom) when is_atom(Atom) -> Model = Atom:make(), Model:id();
+make_blueprint_value(Value) -> Value.
+-endif.
 
 find_or_new(Criteria) ->
   case find(Criteria) of
