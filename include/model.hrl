@@ -4,7 +4,7 @@
   find_or_new/1, find_or_create/1, find_in_batches/2, find_in_batches/3, last/0, last/1]).
 
 -ifdef(TEST).
--export([make/0, make/1]).
+-export([make/0, make/1, make/2]).
 -endif.
 
 -ifndef(MAP).
@@ -30,10 +30,12 @@ save(Record) ->
   update(Record).
 
 -ifdef(TEST).
-make() -> make([]).
-make(Fields) ->
+make() -> make(default, []).
+make(Kind) when is_atom(Kind) -> make(Kind, []);
+make(Fields) when is_list(Fields) -> make(default, Fields).
+make(Kind, Fields) ->
   Blueprint = orddict:merge(fun(_, _, V) -> V end,
-    orddict:from_list(blueprint:make(?MODULE)),
+    orddict:from_list(blueprint:make(?MODULE, Kind)),
     orddict:from_list(Fields)),
   Record = lists:keymap(fun make_blueprint_value/1, 2, Blueprint),
   create(new(Record)).
