@@ -7,9 +7,6 @@
 -export([make/0, make/1, make/2]).
 -endif.
 
--ifndef(MAP).
--define(MAP(Record), Record).
--endif.
 
 id(#?MODULE{id = Id}) -> Id.
 
@@ -64,7 +61,7 @@ create() -> create(#?MODULE{}).
 create(Record = #?MODULE{}) ->
   Now = {datetime, calendar:universal_time()},
   RecordToInsert = Record#?MODULE{created_at = Now, updated_at = Now},
-  Id = db:insert(insert_query(RecordToInsert)),
+  Id = db:insert(insert_query(map_row(RecordToInsert, dump))),
   RecordToInsert#?MODULE{id = Id}.
 
 count(Criteria) ->
@@ -102,9 +99,7 @@ find_with_cache(Criteria) ->
 find_without_cache(Criteria) ->
   case db:select_one(iolist_to_binary(select_query(Criteria, []))) of
     undefined -> undefined;
-    Row ->
-      Record = list_to_tuple([?MODULE | Row]),
-      ?MAP(Record)
+    Row -> load_db_row(Row)
   end.
 
 find_all() -> find_all([], []).
@@ -113,10 +108,24 @@ find_all(Criteria) -> find_all(Criteria, []).
 
 find_all(Criteria, Options) ->
   Rows = db:select(iolist_to_binary(select_query(Criteria, Options))),
-  lists:map(fun(Row) ->
-    Record = list_to_tuple([?MODULE | Row]),
-    ?MAP(Record)
-  end, Rows).
+  lists:map(fun load_db_row/1, Rows).
+
+load_db_row(Row) ->
+  Record = list_to_tuple([?MODULE | Row]),
+  map_row(Record, load).
+
+-ifdef(MAP).
+map_row(Record, Op) -> map_row(Record, Op, ?MAP).
+map_row(Record, _, []) -> Record;
+map_row(Record, Op, [{Field, Mapper} | Rest]) ->
+  Index = field_index(Field),
+  RawValue = element(Index, Record),
+  Value = Mapper:Op(RawValue),
+  NewRecord = setelement(Index, Record, Value),
+  map_row(NewRecord, Op, Rest).
+-else.
+map_row(Record, _) -> Record.
+-endif.
 
 find_in_batches(Criteria, Fun) ->
   find_in_batches(Criteria, 0, fun(Batch, S) -> Fun(Batch), S end, undefined).
@@ -144,7 +153,7 @@ last(Criteria) ->
 update(Record = #?MODULE{}) ->
   Now = {datetime, calendar:universal_time()},
   RecordToUpdate = Record#?MODULE{updated_at = Now},
-  db:update(update_query(RecordToUpdate)),
+  db:update(update_query(map_row(RecordToUpdate, dump))),
   RecordToUpdate.
 
 update(Fields, Record) ->
