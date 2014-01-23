@@ -8,6 +8,8 @@
 -endif.
 
 
+-define(MYSQL_ESCAPE_STRING_CHAR, "`").
+
 id(#?MODULE{id = Id}) -> Id.
 
 new() -> #?MODULE{}.
@@ -61,6 +63,8 @@ create() -> create(#?MODULE{}).
 create(Record = #?MODULE{}) ->
   Now = {datetime, calendar:universal_time()},
   RecordToInsert = Record#?MODULE{created_at = Now, updated_at = Now},
+  PH = insert_query(map_row(RecordToInsert, dump)),
+  io:format("~n~n Insert query ~p", [PH]),
   Id = db:insert(insert_query(map_row(RecordToInsert, dump))),
   RecordToInsert#?MODULE{id = Id}.
 
@@ -180,11 +184,11 @@ insert_query(Record) ->
 insert_fields(Query, Record, [id | Rest]) ->
   insert_fields(Query, Record, Rest);
 insert_fields(Query, Record, [Field]) ->
-  FieldBin = atom_to_binary(Field, latin1),
-  insert_values(<<Query/binary, "`", FieldBin/binary, "`) VALUES (">>, Record, 3, record_info(size, ?MODULE));
+  FieldEscBin = list_to_binary(escape_mysql_field(Field)),
+  insert_values(<<Query/binary, FieldEscBin/binary, ") VALUES (">>, Record, 3, record_info(size, ?MODULE));
 insert_fields(Query, Record, [Field | Rest]) ->
-  FieldBin = atom_to_binary(Field, latin1),
-  insert_fields(<<Query/binary, "`", FieldBin/binary, "`, ">>, Record, Rest).
+  FieldEscBin = list_to_binary(escape_mysql_field(Field)),
+  insert_fields(<<Query/binary, FieldEscBin/binary , ", " >>, Record, Rest).
 
 insert_values(Query, Record, Index, Count) when Index =:= Count ->
   ValueBin = list_to_binary(mysql:encode(element(Index, Record))),
@@ -200,9 +204,9 @@ select_count_query(Criteria, Options) ->
   ["SELECT COUNT(*) FROM ", ?TABLE_NAME | select_criteria(Criteria, Options)].
 
 select_fields(Criteria, Options, [Field]) ->
-  ["`", atom_to_list(Field), "` FROM ", ?TABLE_NAME | select_criteria(Criteria, Options)];
+  [ escape_mysql_field(Field) , " FROM ", ?TABLE_NAME | select_criteria(Criteria, Options)];
 select_fields(Criteria, Options, [Field | Rest]) ->
-  ["`", atom_to_list(Field), "`, " | select_fields(Criteria, Options, Rest)].
+  [ escape_mysql_field(Field) , ", " | select_fields(Criteria, Options, Rest)].
 
 select_criteria([], Options) -> select_options(Options);
 select_criteria(Criteria, Options) ->
@@ -251,18 +255,21 @@ update_query(Record) ->
 
 update_fields(Record, Index, [id | Rest]) ->
   update_fields(Record, Index + 1, Rest);
+
 update_fields(Record, Index, [Field]) ->
-  [atom_to_list(Field), " = ", mysql:encode(element(Index, Record)), " WHERE id = ", mysql:encode(Record#?MODULE.id)];
+  [ escape_mysql_field(Field) , " = ", mysql:encode(element(Index, Record)), " WHERE id = ", mysql:encode(Record#?MODULE.id)];
+
 update_fields(Record, Index, [Field | Rest]) ->
-  [atom_to_list(Field), " = ", mysql:encode(element(Index, Record)), ", " | update_fields(Record, Index + 1, Rest)].
+  [ escape_mysql_field(Field) , " = ", mysql:encode(element(Index, Record)), ", " | update_fields(Record, Index + 1, Rest)].
 
 update_all_query(FieldsValues, Criteria) ->
   ["UPDATE ", ?TABLE_NAME, " SET " | update_all_fields(FieldsValues, Criteria)].
 
 update_all_fields([{Field, Value}], Criteria) ->
-  [atom_to_list(Field), " = ", mysql:encode(Value) | select_criteria(Criteria, [])];
+  [escape_mysql_field(Field), " = ", mysql:encode(Value) | select_criteria(Criteria, [])];
+
 update_all_fields([{Field, Value} | FieldsValues], Criteria) ->
-  [atom_to_list(Field), " = ", mysql:encode(Value), ", " | update_all_fields(FieldsValues, Criteria)].
+  [escape_mysql_field(Field), " = ", mysql:encode(Value), ", " | update_all_fields(FieldsValues, Criteria)].
 
 delete_query(Criteria) ->
   ["DELETE FROM ", ?TABLE_NAME | select_criteria(Criteria, [])].
@@ -278,3 +285,5 @@ field_index(Field) ->
 
 field_index(Field, [Field | _], N) -> N;
 field_index(Field, [_ | Rest], N) -> field_index(Field, Rest, N + 1).
+
+escape_mysql_field(Field) -> ?MYSQL_ESCAPE_STRING_CHAR ++ atom_to_list(Field) ++ ?MYSQL_ESCAPE_STRING_CHAR.
