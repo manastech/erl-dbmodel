@@ -63,8 +63,6 @@ create() -> create(#?MODULE{}).
 create(Record = #?MODULE{}) ->
   Now = {datetime, calendar:universal_time()},
   RecordToInsert = Record#?MODULE{created_at = Now, updated_at = Now},
-  PH = insert_query(map_row(RecordToInsert, dump)),
-  io:format("~n~n Insert query ~p", [PH]),
   Id = db:insert(insert_query(map_row(RecordToInsert, dump))),
   RecordToInsert#?MODULE{id = Id}.
 
