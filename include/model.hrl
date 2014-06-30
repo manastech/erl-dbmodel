@@ -211,28 +211,28 @@ select_criteria(Criteria, Options) ->
   [" WHERE ", select_criteria(Criteria) | select_options(Options)].
 
 select_criteria({Field, in, Values}) ->
-  [atom_to_list(Field), " IN (", value_list(Values), ")"];
+  [escape_mysql_field(Field), " IN (", value_list(Values), ")"];
 
 select_criteria({C1, 'or', C2}) ->
   ["(", select_criteria(C1), " OR ", select_criteria(C2), ")"];
 
 select_criteria({Field, '<', Value}) ->
-  [atom_to_list(Field), " < ", mysql:encode(Value)];
+  [escape_mysql_field(Field), " < ", mysql:encode(Value)];
 
 select_criteria({Field, '<=', Value}) ->
-  [atom_to_list(Field), " <= ", mysql:encode(Value)];
+  [escape_mysql_field(Field), " <= ", mysql:encode(Value)];
 
 select_criteria({Field, '>', Value}) ->
-  [atom_to_list(Field), " > ", mysql:encode(Value)];
+  [escape_mysql_field(Field), " > ", mysql:encode(Value)];
 
 select_criteria({Field, '>=', Value}) ->
-  [atom_to_list(Field), " >= ", mysql:encode(Value)];
+  [escape_mysql_field(Field), " >= ", mysql:encode(Value)];
 
 select_criteria({Field, null}) ->
-  [atom_to_list(Field), " IS NULL"];
+  [escape_mysql_field(Field), " IS NULL"];
 
 select_criteria({Field, Value}) ->
-  [atom_to_list(Field), " = ", mysql:encode(Value)];
+  [escape_mysql_field(Field), " = ", mysql:encode(Value)];
 
 select_criteria([Filter]) ->
   select_criteria(Filter);
@@ -242,9 +242,9 @@ select_criteria([Filter | Rest]) ->
 
 select_options([]) -> [];
 select_options([{order_by, Field} | Rest]) ->
-  [" ORDER BY ", atom_to_list(Field) | select_options(Rest)];
+  [" ORDER BY ", escape_mysql_field(Field) | select_options(Rest)];
 select_options([{order_by, Field, desc} | Rest]) ->
-  [" ORDER BY ", atom_to_list(Field), " DESC" | select_options(Rest)];
+  [" ORDER BY ", escape_mysql_field(Field), " DESC" | select_options(Rest)];
 select_options([{limit, Limit} | Rest]) ->
   [" LIMIT ", integer_to_list(Limit) | select_options(Rest)].
 
