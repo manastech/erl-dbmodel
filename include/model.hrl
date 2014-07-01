@@ -7,9 +7,6 @@
 -export([make/0, make/1, make/2]).
 -endif.
 
-
--define(MYSQL_ESCAPE_STRING_CHAR, "`").
-
 id(#?MODULE{id = Id}) -> Id.
 
 new() -> #?MODULE{}.
@@ -284,4 +281,4 @@ field_index(Field) ->
 field_index(Field, [Field | _], N) -> N;
 field_index(Field, [_ | Rest], N) -> field_index(Field, Rest, N + 1).
 
-escape_mysql_field(Field) -> ?MYSQL_ESCAPE_STRING_CHAR ++ atom_to_list(Field) ++ ?MYSQL_ESCAPE_STRING_CHAR.
+escape_mysql_field(Field) -> [$`, atom_to_list(Field), $`].
