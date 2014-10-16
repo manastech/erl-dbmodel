@@ -36,7 +36,14 @@ make(Kind, Fields) ->
   Record = lists:keymap(fun make_blueprint_value/1, 2, Blueprint),
   create(new(Record)).
 
-make_blueprint_value(Tuple) when is_tuple(Tuple) -> Tuple:id();
+make_blueprint_value({datetime, _ } = Tuple) -> Tuple;
+make_blueprint_value({date, _ } = Tuple) -> Tuple;
+make_blueprint_value(Tuple) when is_tuple(Tuple) ->
+  FirstElement = element(1, Tuple),
+  if
+    is_atom(FirstElement) -> Tuple:id();
+    true -> Tuple
+  end;
 make_blueprint_value(Fun) when is_function(Fun) -> make_blueprint_value(Fun());
 make_blueprint_value(Ref) when is_reference(Ref) -> erlang:ref_to_list(Ref);
 make_blueprint_value(Atom) when is_atom(Atom) -> Model = Atom:make(), Model:id();
