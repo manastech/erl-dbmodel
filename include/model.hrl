@@ -1,5 +1,5 @@
 -include("db.hrl").
--export([id/1, new/0, new/1, create/0, create/1, find/1, find_all/0, find_all/1, find_all/2, count/1, exists/1,
+-export([id/1, new/0, new/1, create/0, create/1, find/1, find_all/0, find_all/1, find_all/2, count/0, count/1, exists/1,
   update/1, update/2, update_all/2, delete/1, delete_all/0, delete_all/1, save/1,
   find_or_new/1, find_or_create/1, find_in_batches/2, find_in_batches/3, last/0, last/1]).
 
@@ -69,6 +69,9 @@ create(Record = #?MODULE{}) ->
   RecordToInsert = Record#?MODULE{created_at = Now, updated_at = Now},
   Id = db:insert(insert_query(map_row(RecordToInsert, dump))),
   RecordToInsert#?MODULE{id = Id}.
+
+count() ->
+  count([]).
 
 count(Criteria) ->
   [Count] = db:select_one(select_count_query(Criteria, [])),
