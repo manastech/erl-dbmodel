@@ -144,7 +144,7 @@ find_in_batches(Criteria, Fun, State) ->
 
 find_in_batches(Criteria, From, Fun, State) ->
   case find_all([{id, '>', From} | Criteria], [{order_by, id}, {limit, 1000}]) of
-    [] -> ok;
+    [] -> State;
     Batch ->
       NewState = Fun(Batch, State),
       Last = lists:last(Batch),
