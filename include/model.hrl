@@ -235,6 +235,9 @@ select_criteria({Field, '>', Value}) ->
 select_criteria({Field, '>=', Value}) ->
   [escape_mysql_field(Field), " >= ", mysql:encode(Value)];
 
+select_criteria({Field, '!=', Value}) ->
+  [escape_mysql_field(Field), " != ", mysql:encode(Value)];
+
 select_criteria({Field, null}) ->
   [escape_mysql_field(Field), " IS NULL"];
 
