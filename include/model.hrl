@@ -1,7 +1,7 @@
 -include("db.hrl").
 -export([id/1, new/0, new/1, create/0, create/1, find/1, find_all/0, find_all/1, find_all/2, count/0, count/1, exists/1,
   update/1, update/2, update_all/2, delete/1, delete_all/0, delete_all/1, save/1,
-  find_or_new/1, find_or_create/1, find_in_batches/2, find_in_batches/3, last/0, last/1]).
+  find_or_new/1, find_or_create/1, find_in_batches/2, find_in_batches/3, first/0, first/1, last/0, last/1]).
 
 -ifdef(TEST).
 -export([make/0, make/1, make/2]).
@@ -149,6 +149,14 @@ find_in_batches(Criteria, From, Fun, State) ->
       NewState = Fun(Batch, State),
       Last = lists:last(Batch),
       find_in_batches(Criteria, Last#?MODULE.id, Fun, NewState)
+  end.
+
+first() -> first([]).
+
+first(Criteria) ->
+  case find_all(Criteria, [{order_by, id}, {limit, 1}]) of
+    [] -> undefined;
+    [Row] -> Row
   end.
 
 last() -> last([]).
